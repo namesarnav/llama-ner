@@ -1,0 +1,30 @@
+[project]
+name = "llama-tkcls"
+version = "0.1.0"
+description = "Llama 3.2 1B Model Trained for NER"
+authors = [
+    {name = "Arnav Verma",email = "arnavverma522@gmail.com"}
+]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+]
+
+
+
+[tool.poetry.dependencies]
+python = ">=3.13"
+torch = "^2.4.0"
+transformers = "^4.44.2"
+peft = "^0.11.1"
+datasets = "^3.6.0"
+bitsandbytes = "^0.40.0"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+
+[tool.poetry]
+package-mode = false
