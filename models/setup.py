@@ -1,8 +1,11 @@
 import yaml
 from transformers import (
     LlamaForTokenClassification,
-    LlamaTokenizer
+    LlamaTokenizer, 
+    DataCollatorForTokenClassification,
+    DataCollatorWithPadding
 )
+
 
 config = yaml.safe_load('../config/config.yml')
 
@@ -15,3 +18,5 @@ def load_base_model(MODEL, num_labels):
 
 def load_tokenizer(TOKENIZER):
     tokenizer = LlamaTokenizer.from_pretrained(TOKENIZER)
+
+    tokenizer.pad_token = {'PAD': '[PAD]'}

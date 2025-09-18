@@ -1,35 +1,27 @@
-import os
-import pandas
+# import numpy as np
+# import pandas as pd
+# import pyarrow as pa
 
-from datasets import Dataset
 
-def read_conll(filepath):
-    sentences, labels, sent, labs = [], [], [], []
-    with open(filepath, "r") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                if sent:
-                    sentences.append(sent)
-                    labels.append(labs)
-                    sent, labs = [], []
-            else:
-                token, tag = line.split()
-                sent.append(token)
-                labs.append(tag)
-    return sentences, labels
-
-def load_dataset(train_file, test_file):
-    train_sentences, train_labels = read_conll(train_file)
-    test_sentences, test_labels = read_conll(test_file)
-
-    train_data = Dataset.from_dict({"tokens": train_sentences, "ner_tags": train_labels})
-    test_data = Dataset.from_dict({"tokens": test_sentences, "ner_tags": test_labels})
-
-    return train_data, test_data
+def load_data(filepath):
+    '''
+    build sentences
+    '''
+    words, tags = [], []
+    sentence, labels = [], []
     
+    with open(filepath, "r") as dataset:
 
+        for line in dataset:
+            
+            if line:
+                sample = line.strip().split()
+                inp, label = sample[0], sample[1]
+                words.append(inp)
+                tags.append(label)
 
-
-
-
+            # if condition not met, means there's no line, so append the word list to sentence    
+            sentence.append(words)
+            labels.append(tags)
+            words, tags = [], []
+            

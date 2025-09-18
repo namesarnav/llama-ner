@@ -1,14 +1,16 @@
 import torch
+from warnings import showwarning
 
 def set_device(): 
 
     if torch.backends.mps.is_available(): 
         print("Device: Using MPS on Apple Silicon")
-        return "mps"
+        torch.device("mps")
 
     elif torch.cuda.is_available():
-        print("CUDA Device available")
-        return "cud"
+        print("CUDA Device available, using cuda")  
+        torch.device("cuda")
     
     else: 
-        raise("DeviceError: No GPU found. Training on CPU is not feasible")
+        showwarning("No GPU found. Training on CPU is not recommended")
+        torch.device("cpu")
