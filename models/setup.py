@@ -1,22 +1,4 @@
-import yaml
-from transformers import (
-    LlamaForTokenClassification,
-    LlamaTokenizer, 
-    DataCollatorForTokenClassification,
-    DataCollatorWithPadding
-)
+"""Backward-compatible imports for model utilities."""
+from .model_loader import load_model, load_tokenizer
 
-
-config = yaml.safe_load('../config/config.yml')
-
-MODEL = config['model_id']
-TOKENIZER = config['tokenizer_id']
-
-
-def load_base_model(MODEL, num_labels):
-    return LlamaForTokenClassification.from_pretrained(MODEL, num_labels=num_labels)
-
-def load_tokenizer(TOKENIZER):
-    tokenizer = LlamaTokenizer.from_pretrained(TOKENIZER)
-
-    tokenizer.pad_token = {'PAD': '[PAD]'}
+__all__ = ["load_model", "load_tokenizer"]

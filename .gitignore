@@ -1,3 +1,5 @@
 .env
 outputs
 poetry.lock
+__pycache__/
+*.pyc

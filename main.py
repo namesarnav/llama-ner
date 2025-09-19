@@ -1,122 +1,129 @@
-from config import (
-    MODEL_ID,
-    HF_TOKEN,
-    TRAIN_FILE,
-    TEST_FILE,
-    FINAL_MODEL_DIR
-)
+from __future__ import annotations
 
-import torch 
-from models.model_loader import load_model, load_tokenizer
-from models.peft_setup import get_lora_model
-from data.dataset_loader import preprocess_data
-from utils.metrics import compute_metrics
+import torch
 from transformers import (
-    TrainingArguments,
-    DataCollatorWithPadding,
+    DataCollatorForTokenClassification,
+    EarlyStoppingCallback,
     Trainer,
-    EarlyStoppingCallback
+    TrainingArguments,
 )
 
-
-def set_device(): 
-
-    device = "cpu" # defaults to cpu device
-    
-    if torch.backends.mps.is_available():
-        print("Model running on Apple Silicon, MPS is available\nSelecting MPS as default device")
-        device = torch.device("mps")
-        return device
-
-    elif torch.cuda.is_available(): 
-        print("CUDA Device found, Defaulting to CUDA")
-        device = torch.device("cuda")
-        return device
-
-    else: 
-        print("No accelarator device found, Defaulting to CPU")
-        return device
+from config import DEFAULT_CONFIG
+from models import get_lora_model, load_model, load_tokenizer
+from utils.device import describe_device, resolve_device
+from utils.metrics import build_compute_metrics
+from utils.preprocess import prepare_datasets
 
 
-def main():
-    #-----
-    print("Loading tokenizer...")
-    tokenizer = load_tokenizer(MODEL_ID, HF_TOKEN)
+def main() -> None:
+    cfg = DEFAULT_CONFIG
 
-    #-----
-    print("Preprocessing dataset...")
-    tk_data_train, tk_data_test, label_encoder = preprocess_data(tokenizer, TRAIN_FILE, TEST_FILE)
-    num_labels = len(label_encoder.classes_)
+    device = resolve_device()
+    print(f"Using device: {describe_device(device)}")
 
-    #-----
-    print("Loading model...")
-    model = load_model(MODEL_ID, HF_TOKEN, num_labels=num_labels)
+    print("Loading tokenizer ...")
+    tokenizer = load_tokenizer(cfg.tokenizer_id, hf_token=cfg.hf_token)
 
-    if getattr(model.config, "vocab_size", None) and len(tokenizer) != model.config.vocab_size:
+    print("Preparing datasets ...")
+    train_dataset, eval_dataset, label2id, id2label = prepare_datasets(
+        tokenizer,
+        str(cfg.train_file),
+        str(cfg.eval_file),
+        cfg.labels,
+        max_length=cfg.max_length,
+        label_all_tokens=cfg.label_all_tokens,
+    )
+
+    num_labels = len(label2id)
+
+    supports_8bit = device.type == "cuda"
+    dtype = torch.float16 if supports_8bit else torch.float32
+    device_map = "auto" if supports_8bit else None
+    bf16_available = torch.cuda.is_available() and torch.cuda.is_bf16_supported()
+
+    print("Loading base model ...")
+    model = load_model(
+        cfg.model_id,
+        hf_token=cfg.hf_token,
+        num_labels=num_labels,
+        id2label=id2label,
+        label2id=label2id,
+        dtype=dtype,
+        device_map=device_map,
+        load_in_8bit=supports_8bit,
+    )
+
+    if getattr(model.config, "vocab_size", None) and len(tokenizer) > model.config.vocab_size:
         model.resize_token_embeddings(len(tokenizer))
 
-    model.config.pad_token_id = tokenizer.pad_token_id
+    pad_token_id = tokenizer.pad_token_id
+    if pad_token_id is None:
+        pad_token_id = tokenizer.convert_tokens_to_ids(tokenizer.pad_token)
+    model.config.pad_token_id = pad_token_id
 
-    #-----
-    print("Preparing LoRA model...")
+    print("Applying LoRA adapters ...")
     model = get_lora_model(model)
     model.print_trainable_parameters()
 
+    if hasattr(model, "enable_input_require_grads"):
+        model.enable_input_require_grads()
 
-    model.to(gpu_device)
-    model.train()
+    if hasattr(model, "gradient_checkpointing_enable"):
+        model.gradient_checkpointing_enable()
+
+    if not supports_8bit:
+        model.to(device)
+
+    data_collator = DataCollatorForTokenClassification(tokenizer=tokenizer, padding="longest")
 
     training_args = TrainingArguments(
-        output_dir="./results",
-        logging_dir="./logs",
-        logging_steps=10,
-        save_steps=512,
-        save_total_limit=3,
-        num_train_epochs=5,
-        per_device_train_batch_size=32,
-        per_device_eval_batch_size=32,
+        output_dir=str(cfg.output_dir),
+        evaluation_strategy="steps",
+        logging_strategy="steps",
+        save_strategy="steps",
+        save_total_limit=2,
+        eval_steps=200,
+        logging_steps=50,
+        learning_rate=2e-4,
+        per_device_train_batch_size=8,
+        per_device_eval_batch_size=8,
         gradient_accumulation_steps=2,
-        learning_rate=3e-5,
-        warmup_ratio=0.05,
+        num_train_epochs=5,
+        weight_decay=0.01,
+        warmup_ratio=0.03,
         lr_scheduler_type="cosine",
-        weight_decay=0.001,
-        eval_strategy="steps",
-        eval_steps=256,
-        load_best_model_at_end=True,
-        dataloader_pin_memory=True,
-        dataloader_num_workers=2,
-        seed=42,
         report_to="none",
+        fp16=supports_8bit,
+        bf16=bf16_available,
         remove_unused_columns=False,
+        load_best_model_at_end=True,
     )
 
-    data_collator = DataCollatorWithPadding(
-        tokenizer=tokenizer,
-        padding=True,
-        return_tensors="pt"
-    )
+    compute_metrics = build_compute_metrics(id2label)
+
+    callbacks = [EarlyStoppingCallback(early_stopping_patience=3)]
 
     trainer = Trainer(
         model=model,
         args=training_args,
-        train_dataset=tk_data_train,
-        eval_dataset=tk_data_test,
+        train_dataset=train_dataset,
+        eval_dataset=eval_dataset,
         tokenizer=tokenizer,
         data_collator=data_collator,
         compute_metrics=compute_metrics,
-        callbacks=[EarlyStoppingCallback(early_stopping_patience=3, early_stopping_threshold=0.01)]
+        callbacks=callbacks,
     )
 
-    print("Starting training...")
+    print("Starting training ...")
     trainer.train()
 
-    print("Saving final model...")
-    trainer.save_model(FINAL_MODEL_DIR)
-    tokenizer.save_pretrained(FINAL_MODEL_DIR)
+    print("Saving model to", cfg.output_dir)
+    trainer.save_model(str(cfg.output_dir))
+    tokenizer.save_pretrained(str(cfg.output_dir))
 
-    print("Evaluating...")
-    results = trainer.evaluate(tk_data_test)
-    print(f"Final results: {results}")
+    print("Evaluating best checkpoint ...")
+    metrics = trainer.evaluate(eval_dataset)
+    print(metrics)
 
 
 if __name__ == "__main__":
