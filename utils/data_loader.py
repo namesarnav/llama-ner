@@ -1,3 +1,4 @@
+from datasets import Dataset
 
 def load_data(filepath):
    
@@ -17,4 +18,5 @@ def load_data(filepath):
                 labels.append(tags)
                 words, tags = [], []
 
-    return sentences, labels
+    data = Dataset.from_dict({"inputs": sentences, "tags": labels})
+    return data
