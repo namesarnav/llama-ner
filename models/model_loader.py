@@ -13,7 +13,6 @@ from transformers import (
     PreTrainedTokenizerBase,
 )
 
-
 def load_tokenizer(model_id: str, *, hf_token: Optional[str] = None) -> PreTrainedTokenizerBase:
     try:
         tokenizer = AutoTokenizer.from_pretrained(model_id, token=hf_token, use_fast=True)
