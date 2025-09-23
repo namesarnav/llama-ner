@@ -8,9 +8,9 @@ from transformers import (
 )
 from typing import Dict, Optional
 
-def load_tokenizer(model_id):
+def load_tokenizer(model_id, token):
     
-    tokenizer = AutoTokenizer.from_pretrained(model_id, use_fast=True)
+    tokenizer = AutoTokenizer.from_pretrained(model_id, use_fast=True, token=token)
 
     if tokenizer.pad_token is None:
         tokenizer.add_special_tokens({"pad_token": "<pad>"})
@@ -27,6 +27,7 @@ def load_model(
     device_map: str | dict | None = "auto",
     load_in_8bit: bool = False,
     load_in_4bit: bool = False,
+    token=None
 ):
     
     quant_config = None
@@ -51,6 +52,8 @@ def load_model(
         num_labels=num_labels,
         quantization_config=quant_config,
         device_map=device_map,
+        token=token,
+        torch_dtype=dtype,
     )
 
     return model
