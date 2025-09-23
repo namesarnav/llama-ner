@@ -3,5 +3,5 @@ from .device import set_device
 from .metrics import build_compute_metrics
 
 
-__all__ = ["load_data", "set_device", "build_compute_metrics", "preprocess"]
+__all__ = ["load_data", "set_device", "build_compute_metrics"]
 
