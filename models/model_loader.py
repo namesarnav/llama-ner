@@ -21,13 +21,12 @@ def load_tokenizer(model_id, token):
 
 def load_model(
     model_id: str,
-    hf_token: Optional[str],
     num_labels: int,
     dtype: torch.dtype = torch.float16,
     device_map: str | dict | None = "auto",
     load_in_8bit: bool = False,
     load_in_4bit: bool = False,
-    token=None
+    token: str = None
 ):
     
     quant_config = None
