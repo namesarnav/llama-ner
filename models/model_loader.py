@@ -26,7 +26,7 @@ def load_model(
     device_map: str | dict | None = "auto",
     load_in_8bit: bool = False,
     load_in_4bit: bool = False,
-    token: str = None
+    token: Optional[str] = None,
 ):
     
     quant_config = None
@@ -47,7 +47,6 @@ def load_model(
 
     model = AutoModelForTokenClassification.from_pretrained(
         model_id,
-        token=hf_token,
         num_labels=num_labels,
         quantization_config=quant_config,
         device_map=device_map,
