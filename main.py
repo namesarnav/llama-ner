@@ -25,9 +25,6 @@ tokenizer = load_tokenizer()
 
 model = load_model(
     model_id=MODEL,
-    num_labels=len(set(tag for tags in train_data['tags'] for tag in tags)),
-    id2label={i: tag for i, tag in enumerate(set(tag for tags in train_data['tags'] for tag in tags))},
-    label2id={tag: i for i, tag in enumerate(set(tag for tags in train_data['tags'] for tag in tags))},
     dtype='float16',
     device_map="auto",
     load_in_4bit=True,

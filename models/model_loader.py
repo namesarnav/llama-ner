@@ -8,6 +8,10 @@ from transformers import (
 )
 from typing import Dict, Optional
 
+
+label2id = {"O": 0, "B-T": 1, "I-T": 2}
+id2label = {0: "O", 1: "B-T", 2: "I-T"}
+
 def load_tokenizer(model_id, token):
     
     tokenizer = AutoTokenizer.from_pretrained(model_id, use_fast=True, token=token)
@@ -21,7 +25,6 @@ def load_tokenizer(model_id, token):
 
 def load_model(
     model_id: str,
-    num_labels: int,
     dtype: torch.dtype = torch.float16,
     device_map: str | dict | None = "auto",
     load_in_8bit: bool = False,
@@ -47,7 +50,9 @@ def load_model(
 
     model = AutoModelForTokenClassification.from_pretrained(
         model_id,
-        num_labels=num_labels,
+        num_labels=len(label2id),
+        id2label=id2label,
+        label2id=label2id,
         quantization_config=quant_config,
         device_map=device_map,
         token=token,
