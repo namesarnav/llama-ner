@@ -4,11 +4,18 @@ from utils import *
 from models import get_lora_model
 from transformers import DataCollatorForTokenClassification
 from datasets import Dataset
-from .config import *
 
 from dotenv import load_dotenv
 load_dotenv()
 import os
+
+
+MODEL = "meta-llama/Llama-3.2-1b"
+TOKENIZER = "meta-llama/Llama-3.2-1b"
+OUTPUT_DIR = "./output"
+EPOCHS = 3
+BATCH_SIZE = 16
+LR = 5e-5
 
 train_data = load_data('/data/train.txt')
 test_data = load_data('/data/test.txt')
