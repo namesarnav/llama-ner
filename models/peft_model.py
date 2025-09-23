@@ -1,7 +1,4 @@
-"""LoRA configuration helpers."""
-from __future__ import annotations
-
-from peft import LoraConfig, TaskType, get_peft_model
+from peft import LoraConfig, TaskType, get_peft_model, prepare_model_for_kbit_training
 
 _TARGET_MODULES = [
     "q_proj",
@@ -13,7 +10,6 @@ _TARGET_MODULES = [
     "down_proj",
 ]
 
-
 def get_lora_model(
     model,
     *,
@@ -21,7 +17,7 @@ def get_lora_model(
     alpha: int = 32,
     dropout: float = 0.05,
 ):
-    """Attach LoRA adapters to the supplied base model."""
+    model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=True)
 
     peft_config = LoraConfig(
         r=rank,
@@ -33,3 +29,4 @@ def get_lora_model(
     )
 
     return get_peft_model(model, peft_config)
+

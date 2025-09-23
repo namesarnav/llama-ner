@@ -1,6 +1,3 @@
-"""Metric helpers for token classification."""
-from __future__ import annotations
-
 from typing import Callable, Dict, List
 
 import numpy as np
@@ -15,7 +12,7 @@ def build_compute_metrics(id2label: Dict[int, str]) -> Callable[[tuple], Dict[st
         predictions = np.argmax(logits, axis=-1)
 
         true_predictions: List[List[str]] = []
-        true_labels: List[List[str]] = []
+        true_labels: List[List[str  ]] = []
 
         for prediction, label in zip(predictions, labels):
             current_preds: List[str] = []
